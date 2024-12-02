@@ -25,7 +25,9 @@ func main() {
 	displayResults(listOne, listTwo)
 }
 
-// processLists sorts two int slices in order. It also confirms there are 2 numbers per line, and they are equal length.
+// processLists parses a byte slice as two int slices in order.
+// It also confirms there are 2 numbers per line, and they are equal length.
+// See inputPath for example input format.
 func processLists(input []byte) ([]int, []int, error) {
 	listOne := make([]int, 0)
 	listTwo := make([]int, 0)
@@ -53,7 +55,7 @@ func processLists(input []byte) ([]int, []int, error) {
 	slices.Sort(listTwo)
 
 	if len(listOne) != len(listTwo) {
-		log.Fatalf("lists are of different lengths: %d vs %d", len(listOne), len(listTwo))
+		return listOne, listTwo, fmt.Errorf("lists are of different lengths: %d vs %d", len(listOne), len(listTwo))
 	}
 
 	return listOne, listTwo, nil
