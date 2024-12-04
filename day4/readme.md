@@ -1,4 +1,4 @@
-# Advent of code 2024 - day 4 - WIP - not working quite right yet!
+# Advent of code 2024 - day 4
 
 https://adventofcode.com/2024/day/4
 

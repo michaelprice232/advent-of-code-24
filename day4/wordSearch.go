@@ -7,15 +7,6 @@ import (
 	"strings"
 )
 
-/*
-WIP - not working 100% yet!
-
-1. Read each line into slice of string slices. Check that all lines are equal length.
-2. Have a function to check which directions are accessible. Return slice of enums
-3. Have another function to return a slice of 3 index points to check - use an offset + / - ?
-4. Iterate over each index and call the two functions. Check for spelling and increment counter
-*/
-
 const inputFile = "./input.txt"
 
 func main() {
@@ -26,6 +17,7 @@ func main() {
 	rawInput := strings.Split(string(b), "\n")
 	inputSlice := make([][]string, 0, len(rawInput))
 
+	// Build the 2D slice
 	for _, row := range rawInput {
 		rowSlice := strings.Split(row, "")
 		inputSlice = append(inputSlice, rowSlice)
@@ -35,16 +27,23 @@ func main() {
 	fmt.Printf("Total matches: %d\n", matches)
 }
 
+// indexPoint represents an index location in a 2D slice.
+type indexPoint struct {
+	rowIndex    int
+	columnIndex int
+}
+
+// calculateWordCount iterates through the input 2D slice and calculates how many times the string "XMAS" appears.
 func calculateWordCount(input [][]string) int {
 	totalMatches := 0
 
 	for rowIndex, row := range input {
-		for columnIndex, character := range row {
+		for columnIndex := range row {
 
 			matches := checkIndexPointDirections(indexPoint{rowIndex: rowIndex, columnIndex: columnIndex},
 				input, len(input), len(row))
 
-			fmt.Printf("Row index: %d, Column index: %d, Character: %s, Matches: %d\n", rowIndex, columnIndex, character, matches)
+			fmt.Printf("Row index: %d, Column index: %d, Matches: %d\n", rowIndex, columnIndex, matches)
 
 			totalMatches += matches
 		}
@@ -53,24 +52,11 @@ func calculateWordCount(input [][]string) int {
 	return totalMatches
 }
 
-type indexPoint struct {
-	rowIndex    int
-	columnIndex int
-}
-
-func isValidPointDirection(index indexPoint, numRows, numColumns int) bool {
-	if index.rowIndex < 0 || index.rowIndex >= numRows {
-		return false
-	}
-	if index.columnIndex < 0 || index.columnIndex >= numColumns {
-		return false
-	}
-	return true
-}
-
+// checkIndexPointDirections takes an indexPoint and iterates through all index directions looking for an "XMAS" string match.
 func checkIndexPointDirections(index indexPoint, inputSlice [][]string, numRows, numColumns int) int {
 	matches := 0
 
+	// The 2D index directions
 	indexDiffs := map[string][][]int{
 		"up":         {{-1, 0}, {-2, 0}, {-3, 0}},
 		"up-right":   {{-1, 1}, {-2, 2}, {-3, 3}},
@@ -79,9 +65,10 @@ func checkIndexPointDirections(index indexPoint, inputSlice [][]string, numRows,
 		"down":       {{1, 0}, {2, 0}, {3, -0}},
 		"down-left":  {{1, -1}, {2, -2}, {3, -3}},
 		"left":       {{0, -1}, {0, -2}, {0, -3}},
-		"up-left":    {{1, -1}, {2, -2}, {3, -3}},
+		"up-left":    {{-1, -1}, {-2, -2}, {-3, -3}},
 	}
 
+	// Check for consecutive string match: "XMAS"
 	for _, diff := range indexDiffs {
 		isValidPoint := isValidPointDirection(indexPoint{rowIndex: index.rowIndex, columnIndex: index.columnIndex}, numRows, numColumns)
 		if isValidPoint && inputSlice[index.rowIndex][index.columnIndex] == "X" {
@@ -101,6 +88,16 @@ func checkIndexPointDirections(index indexPoint, inputSlice [][]string, numRows,
 		}
 	}
 
-	// Check diagonal up left
 	return matches
+}
+
+// isValidPointDirection checks if an indexPoint is out of bounds based on the row and column size.
+func isValidPointDirection(index indexPoint, numRows, numColumns int) bool {
+	if index.rowIndex < 0 || index.rowIndex >= numRows {
+		return false
+	}
+	if index.columnIndex < 0 || index.columnIndex >= numColumns {
+		return false
+	}
+	return true
 }
