@@ -4,27 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
-
-/*
-2 lots of parsing:
-1. 2 string slices for the orders and updates list
-2. pass them to separate function to parse into the proper data structures
-
-
-For the page rule ordering number create a map which contains a slice of the numbers it must come before
-Iterate through each update number in the update input and for the numbers BEFORE it check they aren't in the list for that number (== violation)
-
-map[int][]int
-1: 2,3,4
-
-If we have iterated through all update numbers and there are no violations then it's valid
-
-If it's valid calculate the middle value and append the value to the running total
-
-*/
 
 const inputFile = "./input.txt"
 
@@ -47,15 +30,12 @@ func main() {
 		log.Fatalf("parsing updates input: %v", err)
 	}
 
-	for k, v := range orderings {
-		fmt.Printf("%d: %d\n", k, v)
-	}
-	fmt.Println()
-	for i, v := range updates {
-		fmt.Printf("%d: %d\n", i, v)
-	}
+	result := processUpdates(updates, orderings)
+	fmt.Printf("Total of the middle numbers for all valid updates: %d\n", result)
 }
 
+// parseRaw parses the text input into two slices for later processing.
+// See readme and input.txt for sample input.
 func parseRaw(input []string) ([]string, []string) {
 	orderings := make([]string, 0)
 	updates := make([]string, 0)
@@ -72,6 +52,7 @@ func parseRaw(input []string) ([]string, []string) {
 	return orderings, updates
 }
 
+// parseOrderings parses the orderings slice and builds a map containing the numbers which it should appear before.
 func parseOrderings(rawOrderings []string) (map[int][]int, error) {
 	orderings := make(map[int][]int)
 
@@ -87,10 +68,10 @@ func parseOrderings(rawOrderings []string) (map[int][]int, error) {
 		}
 		dependentNumber, err := strconv.Atoi(ordering[1])
 		if err != nil {
-			return orderings, fmt.Errorf("converting string '%s' to int: %w", ordering[0], err)
+			return orderings, fmt.Errorf("converting string '%s' to int: %w", ordering[1], err)
 		}
 
-		// Check if the key already exists in the map. Initialise an empty slice value if not
+		// Check if the key already exists in the map. Initialise slice if not
 		_, found := orderings[number]
 		if found {
 			orderings[number] = append(orderings[number], dependentNumber)
@@ -102,6 +83,7 @@ func parseOrderings(rawOrderings []string) (map[int][]int, error) {
 	return orderings, nil
 }
 
+// parseUpdates parses the updates slice and converts them into int slices.
 func parseUpdates(rawUpdates []string) ([][]int, error) {
 	updates := make([][]int, 0, len(rawUpdates))
 
@@ -123,24 +105,36 @@ func parseUpdates(rawUpdates []string) ([][]int, error) {
 	return updates, nil
 }
 
-func checkUpdate(update []int, orderings map[int][]int) bool {
-	isValid := true
-
-	for idx, number := range update {
-		fmt.Printf("Checking index %d: %d\n", idx, number)
-
-		//// We are already at the start of the slice. Nothing before it to process
-		//if idx == 0 {
-		//	break
-		//}
-
-		// Process all the elements which appear before this number and check if they should appear afterward
-		for i := idx - 1; i > 0; i-- {
-			currentNumber := update[i]
-			// todo: check if the dependent number exists in the map
+// processUpdates processes each update and check that they are valid and therefore appear in the correct order.
+func processUpdates(updates [][]int, orderings map[int][]int) int {
+	result := 0
+	for _, update := range updates {
+		isValid, reason := checkUpdate(update, orderings)
+		if isValid {
+			middleNumber := len(update) / 2
+			result += update[middleNumber]
+		} else {
+			fmt.Printf("Invalid update %v: %s\n", update, reason)
 		}
-
 	}
 
-	return isValid
+	return result
+}
+
+// checkUpdate checks an individual update to see if its valid.
+func checkUpdate(update []int, orderings map[int][]int) (bool, string) {
+	isValid := true
+	reason := ""
+
+	for idx, number := range update {
+		for i := idx - 1; i >= 0; i-- {
+			currentNumber := update[i]
+			if slices.Contains(orderings[number], currentNumber) {
+				reason = fmt.Sprintf("Number %d appears before %d when it shouldn't", currentNumber, number)
+				isValid = false
+			}
+		}
+	}
+
+	return isValid, reason
 }
