@@ -1,4 +1,4 @@
-# Advent of code 2024 - day 6 - WIP
+# Advent of code 2024 - day 6
 
 https://adventofcode.com/2024/day/6
 
