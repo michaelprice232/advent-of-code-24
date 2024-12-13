@@ -8,29 +8,7 @@ import (
 	"strings"
 )
 
-/*
-
-WIP!!!
-
-Generate all the possible combinations of operators based on an arbitrary number of operands:
-https://en.wikipedia.org/wiki/Cartesian_product
-*/
-
 const inputFile = "./input.txt"
-
-/*
-
-operator[0] = +
-operator[1] = *
-
-operand[0] = 81
-operand[1] = 40
-operand[2] = 27
-
-Iterate over the operands?
-operand[0]
-
-*/
 
 func main() {
 	equations, err := parseConfig(inputFile)
@@ -38,50 +16,10 @@ func main() {
 		log.Fatalf("parsing config from %s: %v", inputFile, err)
 	}
 
-	totalValid := 0
-
-	for _, e := range equations {
-		e.operators = generateVariations(len(e.operands) - 1)
-
-		for _, o := range e.operators {
-			//fmt.Printf("original operators: %s\n", o)
-			total := e.operands[0]
-			operators := strings.Split(o, "")
-			for idx, operator := range operators {
-				//fmt.Printf("current operator: %s\n", operator)
-
-				if operator == "+" {
-					//fmt.Printf("operator is a +: adding %d to %d\n", e.operands[idx+1], total)
-					total += e.operands[idx+1]
-
-				} else if operator == "*" {
-					//fmt.Printf("operator is a *: multiplying %d with %d\n", e.operands[idx+1], total)
-					total *= e.operands[idx+1]
-
-				} else {
-					log.Fatalf("expected operator + or *, but got %s", operator)
-				}
-
-				//fmt.Printf("total=%d, target=%d\n", total, e.target)
-				if total == e.target {
-					e.valid = true
-					break
-				}
-			}
-
-			//fmt.Println()
-		}
-
-		if e.valid {
-			totalValid += e.target
-		}
-
-		fmt.Printf("%#v\n", e)
-	}
-
-	fmt.Printf("Total = %d\n", totalValid)
+	fmt.Printf("Total = %d\n", calculateResults(equations))
 }
 
+// equation holds an individual equation.
 type equation struct {
 	target    int
 	operands  []int
@@ -89,10 +27,14 @@ type equation struct {
 	valid     bool
 }
 
+// parseConfig return a validated slice of equation for later processing.
 func parseConfig(inputFilePath string) ([]equation, error) {
 	b, err := os.ReadFile(inputFilePath)
 	if err != nil {
 		return []equation{}, fmt.Errorf("reading file from %s: %v", inputFile, err)
+	}
+	if len(b) == 0 {
+		return []equation{}, fmt.Errorf("expected at least 1 line of input")
 	}
 
 	rows := strings.Split(string(b), "\n")
@@ -105,6 +47,9 @@ func parseConfig(inputFilePath string) ([]equation, error) {
 		}
 
 		rowSplit := strings.Split(row, ":")
+		if len(rowSplit) != 2 {
+			return []equation{}, fmt.Errorf("expected only 2 components separated by : but got %d. line: %s", len(rowSplit), row)
+		}
 
 		target, err := strconv.Atoi(rowSplit[0])
 		if err != nil {
@@ -113,6 +58,9 @@ func parseConfig(inputFilePath string) ([]equation, error) {
 		e.target = target
 
 		operands := strings.Split(strings.TrimSpace(rowSplit[1]), " ")
+		if len(operands) < 2 {
+			return []equation{}, fmt.Errorf("expected at least 2 operands but got %d. line: %s", len(operands), row)
+		}
 		for _, operand := range operands {
 			o, err := strconv.Atoi(operand)
 			if err != nil {
@@ -121,32 +69,67 @@ func parseConfig(inputFilePath string) ([]equation, error) {
 			e.operands = append(e.operands, o)
 		}
 
+		// Populate the operators with all possible combinations based on the operands
+		e.operators = generateVariations(len(e.operands) - 1)
+		if len(e.operators) == 0 {
+			return []equation{}, fmt.Errorf("expected at least 1 operator but got 0. line: %s", row)
+		}
+
 		results = append(results, e)
 	}
 
 	return results, nil
 }
 
-// generateVariations generates all combinations of '+' and '*' for a given length
+// Generate all the possible combinations of operators (* or +) based on an arbitrary number of operands.
+// https://en.wikipedia.org/wiki/Cartesian_product.
 func generateVariations(length int) []string {
 	if length == 0 {
-		//fmt.Printf("Returning base case 0\n")
-		return []string{""} // Base case: Return an empty string for length 0
+		return []string{""}
 	}
 
-	// Recursive step: Generate combinations for (length - 1)
-	//fmt.Printf("Calling generateVariations(%d)\n", length-1)
 	smallerCombinations := generateVariations(length - 1)
 	var results []string
 
 	// Add '+' and '*' to each combination
 	for _, combination := range smallerCombinations {
-		//fmt.Printf("Appending %s to %s' (length=%d)\n", combination+"+", results, length)
 		results = append(results, combination+"+")
-		//fmt.Printf("Appending %s to %s' (length=%d)\n", combination+"*", results, length)
 		results = append(results, combination+"*")
 	}
 
-	//fmt.Printf("Returning results: %v\n", results)
 	return results
+}
+
+// calculateResults returns the totals of all equation which are valid.
+// Valid is defined by whether the operands can be joined by +/* operators from left to right to reach the target.
+func calculateResults(eq []equation) int {
+	totalValid := 0
+
+	for _, e := range eq {
+		for _, o := range e.operators {
+
+			total := e.operands[0]
+			operators := strings.Split(o, "")
+
+			for idx, operator := range operators {
+				if operator == "+" {
+					total += e.operands[idx+1]
+				} else if operator == "*" {
+					total *= e.operands[idx+1]
+				}
+
+				// If at the end of the current operator list, check if the running total matches the target
+				if idx == len(operators)-1 && total == e.target {
+					e.valid = true
+					break
+				}
+			}
+		}
+
+		if e.valid {
+			totalValid += e.target
+		}
+	}
+
+	return totalValid
 }
